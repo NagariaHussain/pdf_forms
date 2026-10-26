@@ -237,6 +237,13 @@ export const ImageAnnotator = ({ customHeader, id, images, onAnnotationClick, se
                         })
                         el.appendChild(grid)
                         el.title = preview.text
+                    } else if (preview.multiline) {
+                        el.classList.add('pdf-preview-multiline')
+                        const body = document.createElement('div')
+                        body.className = 'pdf-preview-multiline-text'
+                        body.textContent = preview.text
+                        el.appendChild(body)
+                        el.title = preview.text
                     } else {
                         // Plain text: the resolver can return markup (a Text Editor field
                         // prints its HTML), and this must show what actually prints.

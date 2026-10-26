@@ -19,6 +19,8 @@ export type PreviewFieldValue =
         italic?: boolean
         /** Number of cells when the field is a comb (one character per box). */
         comb?: number
+        /** True when the printer wraps the value over several lines. */
+        multiline?: boolean
     }
     | { kind: 'check'; checked: boolean }
     /** A signature or an attached picture, shown as the image itself. */

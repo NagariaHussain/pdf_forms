@@ -24,6 +24,19 @@ class TestTemplateRules(FrappeTestCase):
 		frappe.delete_doc("Form Template", cls.tpl.name, force=1, ignore_permissions=True)
 		super().tearDownClass()
 
+	def test_pdf_can_be_attached_after_the_template_is_created(self):
+		tpl = frappe.get_doc(
+			{
+				"doctype": "Form Template",
+				"template_name": "_Test Attach Later Template",
+				"data_source": "DocType",
+				"source": "ToDo",
+			}
+		).insert()
+		tpl.file = "/private/files/_test_attach_later.pdf"
+		tpl.save()
+		self.assertEqual(frappe.db.get_value("Form Template", tpl.name, "file"), tpl.file)
+
 	def test_pdf_cannot_be_replaced(self):
 		tpl = frappe.get_doc("Form Template", self.tpl.name)
 		tpl.file = "/private/files/other.pdf"

@@ -339,6 +339,17 @@ body {
   pointer-events: none;
 }
 
+.pdf-preview-multiline {
+  align-items: flex-start;
+}
+
+.pdf-preview-multiline-text {
+  width: 100%;
+  line-height: 1.15;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* A ticked checkbox/radio: the printer flips the widget on, so the preview
    shows a mark rather than the raw value. */
 .pdf-preview-check {

@@ -70,8 +70,7 @@
    "description": "Attached once. To use a different PDF, delete this template and create a new one.",
    "fieldname": "file",
    "fieldtype": "Attach",
-   "label": "File",
-   "set_only_once": 1
+   "label": "File"
   },
   {
    "fieldname": "file_extension",
@@ -144,7 +143,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-31 10:58:54.450524",
+ "modified": "2026-10-26 17:41:48.942306",
  "modified_by": "Administrator",
  "module": "PDF Forms",
  "name": "Form Template",

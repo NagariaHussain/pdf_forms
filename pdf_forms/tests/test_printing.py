@@ -190,3 +190,69 @@ class TestPrinting(FrappeTestCase):
 		self.assertNotIn(by_name["C_OFF"], pv)
 		self.assertEqual(pv[by_name["T_TIMES"]]["font"], "times-roman")
 		self.assertEqual(pv[by_name["T_OVERRIDE"]]["font"], "courier")
+
+
+class TestManualBoxWrap(FrappeTestCase):
+	LONG = "Mentored three junior team members, two of whom were promoted within a year. " * 2
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+		cls.tpl = make_template(
+			"_Test Manual Wrap Template",
+			"ToDo",
+			make_form_pdf([("T_NAME", "Name", "text", 0, "Helv", 9)], title="manual wrap"),
+		)
+		img = cls.tpl.form_template_image[0]
+		ratio = img.width / 595
+		cls.box = fitz.Rect(40, 300, 340, 400)
+		cls.tpl.append(
+			"form_template_field",
+			{
+				"id": frappe.generate_hash(length=10),
+				"form_template_image": img.id,
+				"source": "",
+				"value": f"xywh=pixel:{40 * ratio},{300 * ratio},{300 * ratio},{100 * ratio}",
+				"page_index": 0,
+				"x_point": str(40 * ratio),
+				"y_point": str(300 * ratio),
+				"width": str(300 * ratio),
+				"height": str(100 * ratio),
+				"annotation_type": "Manual",
+				"value_type": "Field",
+				"field_value": "description",
+				"field_type": "Text",
+			},
+		)
+		cls.tpl.save(ignore_permissions=True)
+		cls.tpl = frappe.get_doc("Form Template", cls.tpl.name)
+		cls.manual = next(r for r in cls.tpl.form_template_field if r.annotation_type == "Manual")
+
+	@classmethod
+	def tearDownClass(cls):
+		frappe.delete_doc("Form Template", cls.tpl.name, force=1, ignore_permissions=True)
+		super().tearDownClass()
+
+	def print_page(self, description):
+		pdf = build_form_template_pdf(template_id=self.tpl.name, data={"description": description})
+		return fitz.open(stream=pdf, filetype="pdf")[0]
+
+	def test_long_value_wraps_inside_a_tall_box(self):
+		page = self.print_page(self.LONG)
+		lines = {
+			round(y) for y in (b[1] for b in page.get_text("words") if fitz.Rect(b[:4]).intersects(self.box))
+		}
+		self.assertGreater(len(lines), 1)
+		self.assertTrue(
+			get_preview_values(self.tpl.name, {"description": self.LONG})[self.manual.name]["multiline"]
+		)
+
+	def test_short_value_stays_on_one_line(self):
+		self.assertNotIn(
+			"multiline", get_preview_values(self.tpl.name, {"description": "Short"})[self.manual.name]
+		)
+
+	def test_box_without_a_label_prints(self):
+		self.assertFalse(self.manual.field_label)
+		self.assertIn("Mentored", self.print_page(self.LONG).get_text())

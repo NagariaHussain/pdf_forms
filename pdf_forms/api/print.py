@@ -181,7 +181,7 @@ def get_preview_values(template_id: str, data: str | dict[str, Any]) -> dict[str
 	something the generated PDF won't deliver.
 
 	Returns a map of Form Template Field row name -> one of:
-	    {"kind": "text",  "text": str, "font": str, "font_size_px": float}
+	    {"kind": "text",  "text": str, "font": str, "font_size_px": float, "multiline"?: True}
 	    {"kind": "check", "checked": bool}
 
 	`font_size_px` is the effective size expressed in *page image pixels*, so
@@ -226,6 +226,12 @@ def get_preview_values(template_id: str, data: str | dict[str, Any]) -> dict[str
 		for page in template_pdf
 		for widget in page.widgets()
 		if is_comb(widget)
+	}
+	multiline_xrefs = {
+		str(widget.xref)
+		for page in template_pdf
+		for widget in page.widgets()
+		if widget.field_flags & MULTILINE_FLAG
 	}
 
 	for annotation in template.form_template_field:
@@ -319,6 +325,13 @@ def get_preview_values(template_id: str, data: str | dict[str, Any]) -> dict[str
 			"bold": alias in ("hebo", "hebi", "tibo", "tibi", "cobo", "cobi"),
 			"italic": alias in ("heit", "hebi", "tiit", "tibi", "coit", "cobi"),
 		}
+		if annotation.annotation_type == "Manual":
+			box = fitz.Rect(0, 0, float(annotation.width or 0) / scale, float(annotation.height or 0) / scale)
+			multiline = manual_box_wraps(text, box, alias, effective_font_size)
+		else:
+			multiline = str(annotation.xref or "") in multiline_xrefs
+		if multiline:
+			values[annotation.name]["multiline"] = True
 		cells = comb_cells.get(str(annotation.xref or ""))
 		if cells:
 			values[annotation.name]["comb"] = cells
@@ -417,6 +430,17 @@ def is_comb(widget) -> bool:
 	numbers, IFSC, dates on bank forms). PyMuPDF's appearance ignores the
 	flag and writes the value as a plain string, so these are always drawn."""
 	return bool(widget.field_flags & COMB_FLAG) and int(widget.text_maxlen or 0) > 0
+
+
+def manual_box_wraps(text: str, rect, widget_font: str, size: float) -> bool:
+	"""A box drawn in the annotator has no flags of its own: it wraps when the
+	value does not fit on one line and the box is tall enough for a second."""
+	if rect.height < 2 * size * 1.2:
+		return False
+	if "\n" in text:
+		return True
+	font = fitz.Font(WIDGET_FONT_FILES[regular_widget_font((widget_font or "").lower())])
+	return font.text_length(text, fontsize=size) > rect.width - 4
 
 
 def _pdf_string(text: str) -> str:
@@ -974,8 +998,9 @@ def annotatate_manual_fields(page, manual_annotations, data, font, font_size, ba
 				continue
 			widget = fitz.Widget()
 			widget.rect = rect
-			widget.field_name = annotation.field_label
-			widget.field_label = annotation.field_label
+			field_name = annotation.field_label or annotation.name
+			widget.field_name = field_name
+			widget.field_label = field_name
 			mode, text_font, size = resolve_text_style(page.parent, page, annotation, font, font_size)
 			widget.text_fontsize = size
 			# A manual box is a fresh widget with nothing declared, so it stays a
@@ -984,6 +1009,8 @@ def annotatate_manual_fields(page, manual_annotations, data, font, font_size, ba
 			# A box drawn in the annotator arrives with no field_type; it is text.
 			manual_type = annotation.field_type or "Text"
 			widget.field_type = get_field_type(manual_type)
+			if manual_type == "Text" and manual_box_wraps(str(value), rect, widget.text_font, size):
+				widget.field_flags |= MULTILINE_FLAG
 			# No frame: a manual box says where the value goes, not what to draw.
 			# If the form wants a box there, the form already has one.
 
@@ -994,7 +1021,7 @@ def annotatate_manual_fields(page, manual_annotations, data, font, font_size, ba
 			form_fields = page.widgets()
 			# find the widget and update the field value
 			for field in form_fields:
-				if field.field_name == annotation.field_label:
+				if field.field_name == field_name:
 					if manual_type == "Text":
 						field.field_value = str(value) if value is not None and value != "None" else ""
 						field.update()

@@ -20,7 +20,10 @@ def template_file_path(file_url: str | None) -> str:
 		frappe.throw(_("This template has no PDF."), frappe.DoesNotExistError)
 
 	site_root = os.path.realpath(frappe.get_site_path())
-	candidate = os.path.realpath(frappe.get_site_path(file_url.lstrip("/")))
+	relative = file_url.lstrip("/")
+	if relative.startswith("files/"):
+		relative = os.path.join("public", relative)
+	candidate = os.path.realpath(frappe.get_site_path(relative))
 	allowed = (
 		os.path.join(site_root, "private", "files") + os.sep,
 		os.path.join(site_root, "public", "files") + os.sep,

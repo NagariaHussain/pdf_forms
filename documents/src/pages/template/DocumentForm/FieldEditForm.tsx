@@ -43,6 +43,7 @@ export const FieldEditForm = ({ index }: FieldEditFormProps) => {
     const { templateID } = useParams<{ templateID: string }>()
 
     const valueType = watch(`fields.${index}.value_type`)
+    const isManual = watch(`fields.${index}.annotation_type`) === 'Manual'
     const isDefaultJinja = watch(`fields.${index}.is_default_jinja`)
     const overrideStyle = watch(`fields.${index}.override_style`)
 
@@ -84,7 +85,7 @@ export const FieldEditForm = ({ index }: FieldEditFormProps) => {
                     name={`fields.${index}.field_label`}
                     label={_("Label")}
                     isRequired
-                    readOnly
+                    readOnly={!isManual}
                     inputProps={{ placeholder: _("Label") }}
                 />
 

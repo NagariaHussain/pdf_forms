@@ -9,7 +9,6 @@ from openpyxl import Workbook
 
 removed_column_type = [
 	"Attach",
-	"Attach Image",
 	"Autocomplete",
 	"Column Break",
 	"Button",
@@ -21,7 +20,6 @@ removed_column_type = [
 	"Icon",
 	"Section Break",
 	"Tab Break",
-	"Signature",
 	"Color",
 	"HTML Editor",
 	"Image",

@@ -88,8 +88,10 @@ class TestTemplateRules(FrappeTestCase):
 		from pdf_forms.utils.files import template_file_path
 
 		self.assertTrue(template_file_path("/private/files/x.pdf").endswith("/private/files/x.pdf"))
+		self.assertTrue(template_file_path("/files/x.png").endswith("/public/files/x.png"))
 		for bad in (
 			"/private/files/../../../../etc/hosts",
+			"/files/../../../../etc/hosts",
 			"/etc/hosts",
 			"private/../../sites/other/private/files/a.pdf",
 		):

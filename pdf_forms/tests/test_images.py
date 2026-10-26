@@ -8,7 +8,9 @@ import base64
 import fitz
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils.file_manager import save_file
 
+from pdf_forms.api.adapter import get_json_schema_for_doctype
 from pdf_forms.api.print import build_form_template_pdf, get_preview_values, image_bytes_for
 from pdf_forms.tests._fixtures import make_form_pdf, make_template
 
@@ -65,6 +67,19 @@ class TestImageValues(FrappeTestCase):
 		self.assertTrue(sign_rect.contains(box), f"{box} outside {sign_rect}")
 		# proportions kept: the 200x60 picture is wider than tall
 		self.assertGreater(box.width / box.height, 2.5)
+
+	def test_public_attached_image_is_stamped(self):
+		png = base64.b64decode(signature_data_url().split(",", 1)[1])
+		url = save_file("_test_pdf_forms_public.png", png, None, None, is_private=0).file_url
+		self.assertTrue(url.startswith("/files/"))
+		pdf = build_form_template_pdf(template_id=self.tpl.name, data={"description": url})
+		page = fitz.open(stream=pdf, filetype="pdf")[0]
+		self.assertNotIn("NAME", {w.field_name for w in page.widgets()})
+		self.assertEqual(len(page.get_image_info()), 1)
+
+	def test_picture_fields_can_be_mapped(self):
+		properties = get_json_schema_for_doctype("User")["properties"]
+		self.assertEqual(properties["user_image"]["fieldtype"], "Attach Image")
 
 	def test_preview_reports_the_picture(self):
 		pv = get_preview_values(self.tpl.name, self.data)
